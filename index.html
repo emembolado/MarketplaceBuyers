@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en" data-mode="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Easebrew — Marketplace sales monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{
+    --bg:#FAF7F2; --surface:#FFFFFF; --surface-2:#F3EEE5;
+    --ink:#2B2118; --ink-soft:#5C5346; --muted:#8B8074;
+    --border:#E4DDCF; --border-strong:#D2C7B4;
+    --paid:#C97B3D; --paid-bg:#F7E9D9; --paid-ink:#7A4A1F;
+    --organic:#4F7A5A; --organic-bg:#E4EEE3; --organic-ink:#2F4F38;
+    --live:#1FC9B7; --live-bg:#E1F5F2; --live-ink:#0F6B62;
+    --shopee:#E8703A; --shopee2:#F0A868; --lazada:#1E4FA3; --tiktok:#111417; --tiktok-2:#1FC9B7;
+    --danger:#C1503F; --danger-bg:#F7E3E0;
+    --radius:10px;
+    --font-display:'Fraunces', serif; --font-sans:'Inter', sans-serif; --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);line-height:1.5;padding:2rem 1.25rem 4rem;}
+  .wrap{max-width:1040px;margin:0 auto;}
+  .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:1rem;margin-bottom:1.75rem;}
+  .brand{font-family:var(--font-display);font-size:28px;font-weight:600;letter-spacing:-0.01em;}
+  .brand span{color:var(--organic-ink);}
+  .sub{color:var(--muted);font-size:13px;margin-top:2px;}
+  .month-select{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .range-tabs{display:flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:8px;}
+  .range-tabs button{padding:5px 12px;font-size:12px;border:none;background:transparent;border-radius:6px;}
+  .range-tabs button.active{background:var(--ink);color:var(--bg);}
+  .range-tabs button:hover:not(.active){background:var(--border);}
+  select,input{font-family:var(--font-sans);font-size:14px;padding:8px 10px;border:0.5px solid var(--border-strong);border-radius:8px;background:var(--surface);color:var(--ink);}
+  button{font-family:var(--font-sans);font-size:14px;padding:9px 16px;border-radius:8px;border:0.5px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer;}
+  button:hover{background:var(--surface-2);}
+  button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+  button.primary:hover{opacity:0.9;}
+  .card{background:var(--surface);border:0.5px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;}
+
+  .hero{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:1.75rem 1.75rem 1.5rem;margin-bottom:1.25rem;}
+  .hero-top{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .hero-label{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em;}
+  .hero-num{font-family:var(--font-display);font-size:40px;font-weight:600;letter-spacing:-0.01em;}
+  .hero-target{font-size:14px;color:var(--muted);font-family:var(--font-mono);}
+  .bar-track{height:14px;background:var(--surface-2);border-radius:99px;overflow:hidden;position:relative;border:0.5px solid var(--border);}
+  .bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--organic),var(--paid));transition:width .4s ease;}
+  .hero-foot{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--muted);font-family:var(--font-mono);}
+
+  .split-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:1.25rem;}
+  .split-card{border-radius:14px;padding:1rem 1.2rem;}
+  .split-card.paid{background:var(--paid-bg);}
+  .split-card.organic{background:var(--organic-bg);}
+  .split-card.live{background:var(--live-bg);}
+  .split-card.roas{background:var(--surface-2);}
+  .split-label{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+  .split-card.paid .split-label{color:var(--paid-ink);}
+  .split-card.organic .split-label{color:var(--organic-ink);}
+  .split-card.live .split-label{color:var(--live-ink);}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .split-num{font-family:var(--font-mono);font-size:22px;font-weight:500;}
+  .split-card.paid .split-num{color:var(--paid-ink);}
+  .split-card.organic .split-num{color:var(--organic-ink);}
+  .split-card.live .split-num{color:var(--live-ink);}
+  .split-pct{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+  .roas-badge{font-size:11px;padding:2px 8px;border-radius:99px;margin-left:auto;font-family:var(--font-mono);}
+  .roas-good{background:var(--organic-bg);color:var(--organic-ink);}
+  .roas-bad{background:var(--danger-bg);color:var(--danger);}
+
+  h2{font-family:var(--font-display);font-size:19px;font-weight:600;margin:0 0 0.9rem;}
+  .section{margin-bottom:1.5rem;}
+  .platform-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;}
+  .plat-card{border-radius:14px;padding:1.1rem 1.2rem;}
+  .plat-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .plat-name{font-weight:500;font-size:15px;}
+  .plat-chip{width:8px;height:8px;border-radius:50%;}
+  .plat-stats{display:flex;gap:14px;margin-bottom:12px;font-size:12px;color:var(--ink-soft);flex-wrap:wrap;}
+  .plat-stats b{font-family:var(--font-mono);color:var(--ink);font-weight:500;display:block;font-size:14px;}
+  .entry-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .entry-form label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px;}
+  .entry-form input{width:100%;}
+  .entry-form .full{grid-column:1 / -1;}
+  .add-btn{margin-top:8px;width:100%;}
+
+  .chart-tabs{display:flex;gap:6px;margin-bottom:10px;}
+  .chart-tabs button{padding:6px 12px;font-size:13px;}
+  .chart-tabs button.active{background:var(--ink);color:var(--bg);border-color:var(--ink);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;padding:6px 8px;border-bottom:0.5px solid var(--border);}
+  td{padding:8px;border-bottom:0.5px solid var(--border);font-family:var(--font-mono);}
+  td.p{font-family:var(--font-sans);}
+  tr:last-child td{border-bottom:none;}
+  .del{font-family:var(--font-sans);font-size:12px;color:var(--danger);background:none;border:none;padding:2px 6px;cursor:pointer;}
+  .empty{color:var(--muted);font-size:13px;padding:1rem 0;text-align:center;}
+  .footer-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:1rem;}
+  @media (max-width:640px){.split-row{grid-template-columns:1fr;} .entry-form{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <div class="brand">Easebrew <span>sales monitor</span></div>
+      <div class="sub">Paid ads vs organic sales — Shopee (Main + Herbal PH), Lazada, TikTok Shop</div>
+    </div>
+    <div class="month-select">
+      <div class="range-tabs" id="rangeTabs">
+        <button data-mode="month" class="active">Month</button>
+        <button data-mode="week">Week</button>
+        <button data-mode="custom">Custom</button>
+      </div>
+      <select id="monthSelect"></select>
+      <select id="weekSelect" style="display:none"></select>
+      <div id="customRange" style="display:none;align-items:center;gap:6px;">
+        <input type="date" id="customStart"><span style="color:var(--muted);font-size:12px;">to</span><input type="date" id="customEnd">
+      </div>
+      <button id="exportBtn">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-top">
+      <div>
+        <div class="hero-label" id="heroLabel">Total sales this month</div>
+        <div class="hero-num" id="heroTotal">₱0</div>
+      </div>
+      <div class="hero-target" id="heroTargetWrap">Quota <span id="quotaVal">₱4,000,000</span></div>
+    </div>
+    <div id="quotaBarWrap">
+      <div class="bar-track"><div class="bar-fill" id="quotaBar" style="width:0%"></div></div>
+      <div class="hero-foot">
+        <span id="quotaPct">0% of quota</span>
+        <span id="quotaRemain">₱4,000,000 remaining</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="split-row">
+    <div class="split-card paid">
+      <div class="split-label"><span class="dot" style="background:var(--paid)"></span>Paid ads sales</div>
+      <div class="split-num" id="paidTotal">₱0</div>
+      <div class="split-pct" id="paidPct">0% of total</div>
+    </div>
+    <div class="split-card live">
+      <div class="split-label"><span class="dot" style="background:var(--live)"></span>Live sales</div>
+      <div class="split-num" id="liveTotal">₱0</div>
+      <div class="split-pct" id="livePct">0% of total · reference lang, ads-driven din</div>
+    </div>
+    <div class="split-card organic">
+      <div class="split-label"><span class="dot" style="background:var(--organic)"></span>Organic sales</div>
+      <div class="split-num" id="organicTotal">₱0</div>
+      <div class="split-pct" id="organicPct">0% of total</div>
+    </div>
+    <div class="split-card roas">
+      <div class="split-label">Blended ROAS<span class="roas-badge roas-good" id="roasBadge">on target</span></div>
+      <div class="split-num" id="roasVal">0.0x</div>
+      <div class="split-pct">Target 10–15x</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Add today's numbers</h2>
+    <div class="platform-row" id="platformCards"></div>
+  </div>
+
+  <div class="section card">
+    <h2>Organic vs paid trend</h2>
+    <div class="chart-tabs" id="platformFilter"></div>
+    <div style="display:flex;gap:16px;margin-bottom:8px;font-size:12px;color:var(--ink-soft);">
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--organic);"></span>Organic</span>
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--paid);"></span>Paid ads</span>
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--live);"></span>Live sales</span>
+    </div>
+    <div style="position:relative;width:100%;height:280px;">
+      <canvas id="trendChart" role="img" aria-label="Stacked bar chart of daily organic, paid ads, and live sales">Daily sales split between organic, paid ads, and live sales sources.</canvas>
+    </div>
+  </div>
+
+  <div class="section card">
+    <h2>Entry log</h2>
+    <div id="logTable"></div>
+  </div>
+
+  <div class="footer-actions">
+    <button id="resetBtn">Clear all data</button>
+  </div>
+
+</div>
+
+<script>
+const PLATFORMS = [
+  { id:'shopee_main', name:'Shopee (Main)', color:'var(--shopee)', hasLive:false },
+  { id:'shopee_herbal', name:'Shopee (Herbal PH)', color:'var(--shopee2)', hasLive:false },
+  { id:'lazada', name:'Lazada', color:'var(--lazada)', hasLive:false },
+  { id:'tiktok', name:'TikTok Shop', color:'var(--tiktok-2)', hasLive:true }
+];
+const QUOTA = 4000000;
+let entries = [];
+let activeFilter = 'all';
+let chart = null;
+
+function peso(n){ return '₱' + Math.round(n).toLocaleString('en-PH'); }
+function commaFmt(n){ return Number(n).toLocaleString('en-PH', {maximumFractionDigits:2}); }
+function numVal(id){ const v = (document.getElementById(id).value || '').toString().replace(/,/g,'').trim(); return parseFloat(v) || 0; }
+function formatAmountField(el){
+  const raw = el.value.replace(/,/g,'').trim();
+  if(raw === '' || isNaN(parseFloat(raw))){ el.value=''; return; }
+  el.value = commaFmt(parseFloat(raw));
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function monthKey(d){ return d.slice(0,7); }
+function uid(){ return 'e' + Date.now() + Math.random().toString(36).slice(2,7); }
+
+const SEED_ROWS = [
+    {p:'shopee_main',d:'2026-04-01',t:23322,s:3181.93,a:14158.51,l:0},
+    {p:'shopee_main',d:'2026-04-02',t:26351,s:3595.19,a:15997.38,l:0},
+    {p:'shopee_main',d:'2026-04-03',t:25215,s:3440.2,a:15307.72,l:0},
+    {p:'shopee_main',d:'2026-04-04',t:25661,s:3501.05,a:15578.49,l:0},
+    {p:'shopee_main',d:'2026-04-05',t:25706,s:3507.19,a:15605.8,l:0},
+    {p:'shopee_main',d:'2026-04-06',t:36478,s:4976.87,a:22145.36,l:0},
+    {p:'shopee_main',d:'2026-04-07',t:13189,s:1799.44,a:8006.88,l:0},
+    {p:'shopee_main',d:'2026-04-08',t:22981,s:3135.41,a:13951.49,l:0},
+    {p:'shopee_main',d:'2026-04-09',t:19479,s:2657.61,a:11825.47,l:0},
+    {p:'shopee_main',d:'2026-04-10',t:21178,s:2889.42,a:12856.91,l:0},
+    {p:'shopee_main',d:'2026-04-11',t:20807,s:2838.8,a:12631.68,l:0},
+    {p:'shopee_main',d:'2026-04-12',t:20630,s:2814.65,a:12524.23,l:0},
+    {p:'shopee_main',d:'2026-04-13',t:33222,s:4532.64,a:20168.68,l:0},
+    {p:'shopee_main',d:'2026-04-14',t:19353,s:2640.42,a:11748.97,l:0},
+    {p:'shopee_main',d:'2026-04-15',t:32200,s:4393.2,a:19548.23,l:0},
+    {p:'shopee_main',d:'2026-04-16',t:28436,s:3879.66,a:17263.16,l:0},
+    {p:'shopee_main',d:'2026-04-17',t:31356,s:4278.05,a:19035.85,l:0},
+    {p:'shopee_main',d:'2026-04-18',t:20534,s:2801.55,a:12465.95,l:0},
+    {p:'shopee_main',d:'2026-04-19',t:35288,s:4814.51,a:21422.92,l:0},
+    {p:'shopee_main',d:'2026-04-20',t:28262,s:3855.92,a:17157.52,l:0},
+    {p:'shopee_main',d:'2026-04-21',t:15102,s:2060.44,a:9168.24,l:0},
+    {p:'shopee_main',d:'2026-04-22',t:32720,s:4464.15,a:19863.92,l:0},
+    {p:'shopee_main',d:'2026-04-23',t:38258,s:5219.72,a:23225.97,l:0},
+    {p:'shopee_main',d:'2026-04-24',t:28268,s:3856.74,a:17161.16,l:0},
+    {p:'shopee_main',d:'2026-04-25',t:20006,s:2729.52,a:12145.4,l:0},
+    {p:'shopee_main',d:'2026-04-26',t:36451,s:4973.19,a:22128.97,l:0},
+    {p:'shopee_main',d:'2026-04-27',t:35551,s:4850.39,a:21582.59,l:0},
+    {p:'shopee_main',d:'2026-04-28',t:52833,s:7208.26,a:32074.28,l:0},
+    {p:'shopee_main',d:'2026-04-29',t:41235,s:5625.89,a:25033.27,l:0},
+    {p:'shopee_main',d:'2026-04-30',t:40242,s:5490.41,a:24430.44,l:0},
+    {p:'shopee_main',d:'2026-05-01',t:30385,s:4088.2,a:21817.85,l:0},
+    {p:'shopee_main',d:'2026-05-02',t:22343,s:3006.17,a:16043.32,l:0},
+    {p:'shopee_main',d:'2026-05-03',t:25493,s:3430.0,a:18305.16,l:0},
+    {p:'shopee_main',d:'2026-05-04',t:8759,s:1178.49,a:6289.37,l:0},
+    {p:'shopee_main',d:'2026-05-05',t:41990,s:5649.61,a:30150.78,l:0},
+    {p:'shopee_main',d:'2026-05-06',t:16285,s:2191.09,a:11693.39,l:0},
+    {p:'shopee_main',d:'2026-05-07',t:46106,s:6203.4,a:33106.26,l:0},
+    {p:'shopee_main',d:'2026-05-08',t:41410,s:5571.57,a:29734.31,l:0},
+    {p:'shopee_main',d:'2026-05-09',t:41075,s:5526.5,a:29493.77,l:0},
+    {p:'shopee_main',d:'2026-05-10',t:30588,s:4115.51,a:21963.61,l:0},
+    {p:'shopee_main',d:'2026-05-11',t:41023,s:5519.5,a:29456.43,l:0},
+    {p:'shopee_main',d:'2026-05-12',t:41335,s:5561.48,a:29680.46,l:0},
+    {p:'shopee_main',d:'2026-05-13',t:33428,s:4497.62,a:24002.87,l:0},
+    {p:'shopee_main',d:'2026-05-14',t:18001,s:2421.97,a:12925.56,l:0},
+    {p:'shopee_main',d:'2026-05-15',t:28950,s:3895.12,a:20787.45,l:0},
+    {p:'shopee_main',d:'2026-05-16',t:26827,s:3609.48,a:19263.04,l:0},
+    {p:'shopee_main',d:'2026-05-17',t:22801,s:3067.8,a:16372.18,l:0},
+    {p:'shopee_main',d:'2026-05-18',t:16132,s:2170.51,a:11583.53,l:0},
+    {p:'shopee_main',d:'2026-05-19',t:18610,s:2503.91,a:13362.85,l:0},
+    {p:'shopee_main',d:'2026-05-20',t:23992,s:3228.04,a:17227.38,l:0},
+    {p:'shopee_main',d:'2026-05-21',t:36105,s:4857.8,a:25925.08,l:0},
+    {p:'shopee_main',d:'2026-05-22',t:25775,s:3467.94,a:18507.65,l:0},
+    {p:'shopee_main',d:'2026-05-23',t:29243,s:3934.55,a:20997.84,l:0},
+    {p:'shopee_main',d:'2026-05-24',t:29395,s:3955.0,a:21106.98,l:0},
+    {p:'shopee_main',d:'2026-05-25',t:27057,s:3640.43,a:19428.19,l:0},
+    {p:'shopee_main',d:'2026-05-26',t:21519,s:2895.31,a:15451.65,l:0},
+    {p:'shopee_main',d:'2026-05-27',t:29614,s:3984.46,a:21264.24,l:0},
+    {p:'shopee_main',d:'2026-05-28',t:23884,s:3213.51,a:17149.83,l:0},
+    {p:'shopee_main',d:'2026-05-29',t:33501,s:4507.44,a:24055.28,l:0},
+    {p:'shopee_main',d:'2026-05-30',t:25527,s:3434.57,a:18329.58,l:0},
+    {p:'shopee_main',d:'2026-05-31',t:29909,s:4024.15,a:21476.06,l:0},
+    {p:'shopee_main',d:'2026-06-01',t:38620,s:5086.98,a:28724.85,l:0},
+    {p:'shopee_main',d:'2026-06-02',t:42546,s:5604.1,a:31644.94,l:0},
+    {p:'shopee_main',d:'2026-06-03',t:38889,s:5122.41,a:28924.93,l:0},
+    {p:'shopee_main',d:'2026-06-04',t:34222,s:4507.68,a:25453.7,l:0},
+    {p:'shopee_main',d:'2026-06-05',t:38204,s:5032.18,a:28415.44,l:0},
+    {p:'shopee_main',d:'2026-06-06',t:52189,s:6874.27,a:38817.23,l:0},
+    {p:'shopee_main',d:'2026-06-07',t:46676,s:6148.1,a:34716.76,l:0},
+    {p:'shopee_main',d:'2026-06-08',t:27481,s:3619.76,a:20439.87,l:0},
+    {p:'shopee_main',d:'2026-06-09',t:23831,s:3138.99,a:17725.06,l:0},
+    {p:'shopee_main',d:'2026-06-10',t:29780,s:3922.58,a:22149.82,l:0},
+    {p:'shopee_main',d:'2026-06-11',t:24834,s:3271.1,a:18471.08,l:0},
+    {p:'shopee_main',d:'2026-06-12',t:28751,s:3787.04,a:21384.47,l:0},
+    {p:'shopee_main',d:'2026-06-13',t:19401,s:2555.47,a:14430.11,l:0},
+    {p:'shopee_main',d:'2026-06-14',t:37946,s:4998.2,a:28223.54,l:0},
+    {p:'shopee_main',d:'2026-06-15',t:78669,s:10362.18,a:58512.57,l:0},
+    {p:'shopee_main',d:'2026-06-16',t:42421,s:5587.64,a:31551.97,l:0},
+    {p:'shopee_main',d:'2026-06-17',t:27892,s:3673.9,a:20745.56,l:0},
+    {p:'shopee_main',d:'2026-06-18',t:46522,s:6127.82,a:34602.21,l:0},
+    {p:'shopee_main',d:'2026-06-19',t:45145,s:5946.44,a:33578.03,l:0},
+    {p:'shopee_main',d:'2026-06-20',t:26103,s:3438.25,a:19414.94,l:0},
+    {p:'shopee_main',d:'2026-06-21',t:38616,s:5086.45,a:28721.88,l:0},
+    {p:'shopee_main',d:'2026-06-22',t:33814,s:4453.94,a:25150.24,l:0},
+    {p:'shopee_main',d:'2026-06-23',t:34386,s:4529.28,a:25575.68,l:0},
+    {p:'shopee_main',d:'2026-06-24',t:29797,s:3924.82,a:22162.47,l:0},
+    {p:'shopee_main',d:'2026-06-25',t:41983,s:5529.95,a:31226.19,l:0},
+    {p:'shopee_main',d:'2026-06-26',t:46629,s:6141.91,a:34681.8,l:0},
+    {p:'shopee_main',d:'2026-06-27',t:45113,s:5942.23,a:33554.23,l:0},
+    {p:'shopee_main',d:'2026-06-28',t:32559,s:4288.63,a:24216.79,l:0},
+    {p:'shopee_main',d:'2026-06-29',t:37069,s:4882.68,a:27571.25,l:0},
+    {p:'shopee_main',d:'2026-06-30',t:35937,s:4733.57,a:26729.29,l:0},
+    {p:'shopee_herbal',d:'2026-04-01',t:15896,s:2168.77,a:9650.27,l:0},
+    {p:'shopee_herbal',d:'2026-04-02',t:12764,s:1741.45,a:7748.87,l:0},
+    {p:'shopee_herbal',d:'2026-04-03',t:8127,s:1108.81,a:4933.8,l:0},
+    {p:'shopee_herbal',d:'2026-04-04',t:17912,s:2443.82,a:10874.16,l:0},
+    {p:'shopee_herbal',d:'2026-04-05',t:13474,s:1838.32,a:8179.9,l:0},
+    {p:'shopee_herbal',d:'2026-04-06',t:10919,s:1489.73,a:6628.79,l:0},
+    {p:'shopee_herbal',d:'2026-04-07',t:15696,s:2141.48,a:9528.85,l:0},
+    {p:'shopee_herbal',d:'2026-04-08',t:17037,s:2324.44,a:10342.96,l:0},
+    {p:'shopee_herbal',d:'2026-04-09',t:26474,s:3611.98,a:16072.05,l:0},
+    {p:'shopee_herbal',d:'2026-04-10',t:19229,s:2623.51,a:11673.7,l:0},
+    {p:'shopee_herbal',d:'2026-04-11',t:17284,s:2358.14,a:10492.91,l:0},
+    {p:'shopee_herbal',d:'2026-04-12',t:24285,s:3313.32,a:14743.13,l:0},
+    {p:'shopee_herbal',d:'2026-04-13',t:14513,s:1980.08,a:8810.67,l:0},
+    {p:'shopee_herbal',d:'2026-04-14',t:8494,s:1158.88,a:5156.61,l:0},
+    {p:'shopee_herbal',d:'2026-04-15',t:23398,s:3192.3,a:14204.65,l:0},
+    {p:'shopee_herbal',d:'2026-04-16',t:15610,s:2129.75,a:9476.64,l:0},
+    {p:'shopee_herbal',d:'2026-04-17',t:14916,s:2035.06,a:9055.32,l:0},
+    {p:'shopee_herbal',d:'2026-04-18',t:9894,s:1349.89,a:6006.53,l:0},
+    {p:'shopee_herbal',d:'2026-04-19',t:23960,s:3268.98,a:14545.83,l:0},
+    {p:'shopee_herbal',d:'2026-04-20',t:15082,s:2057.71,a:9156.1,l:0},
+    {p:'shopee_herbal',d:'2026-04-21',t:9486,s:1294.22,a:5758.84,l:0},
+    {p:'shopee_herbal',d:'2026-04-22',t:11361,s:1550.04,a:6897.13,l:0},
+    {p:'shopee_herbal',d:'2026-04-23',t:9790,s:1335.7,a:5943.39,l:0},
+    {p:'shopee_herbal',d:'2026-04-24',t:16218,s:2212.7,a:9845.75,l:0},
+    {p:'shopee_herbal',d:'2026-04-25',t:7988,s:1089.84,a:4849.42,l:0},
+    {p:'shopee_herbal',d:'2026-04-26',t:12196,s:1663.96,a:7404.05,l:0},
+    {p:'shopee_herbal',d:'2026-04-27',t:11733,s:1600.79,a:7122.96,l:0},
+    {p:'shopee_herbal',d:'2026-04-28',t:10670,s:1455.76,a:6477.63,l:0},
+    {p:'shopee_herbal',d:'2026-04-29',t:11539,s:1574.32,a:7005.19,l:0},
+    {p:'shopee_herbal',d:'2026-04-30',t:12704,s:1733.27,a:7712.45,l:0},
+    {p:'shopee_herbal',d:'2026-05-01',t:17503,s:2354.97,a:12567.97,l:0},
+    {p:'shopee_herbal',d:'2026-05-02',t:20968,s:2821.17,a:15056.0,l:0},
+    {p:'shopee_herbal',d:'2026-05-03',t:19118,s:2572.26,a:13727.62,l:0},
+    {p:'shopee_herbal',d:'2026-05-04',t:15017,s:2020.49,a:10782.91,l:0},
+    {p:'shopee_herbal',d:'2026-05-05',t:14911,s:2006.22,a:10706.79,l:0},
+    {p:'shopee_herbal',d:'2026-05-06',t:13542,s:1822.03,a:9723.79,l:0},
+    {p:'shopee_herbal',d:'2026-05-07',t:20431,s:2748.92,a:14670.41,l:0},
+    {p:'shopee_herbal',d:'2026-05-08',t:10326,s:1389.33,a:7414.55,l:0},
+    {p:'shopee_herbal',d:'2026-05-09',t:17189,s:2312.72,a:12342.5,l:0},
+    {p:'shopee_herbal',d:'2026-05-10',t:22165,s:2982.22,a:15915.51,l:0},
+    {p:'shopee_herbal',d:'2026-05-11',t:24890,s:3348.86,a:17872.18,l:0},
+    {p:'shopee_herbal',d:'2026-05-12',t:17204,s:2314.74,a:12353.28,l:0},
+    {p:'shopee_herbal',d:'2026-05-13',t:16258,s:2187.46,a:11674.0,l:0},
+    {p:'shopee_herbal',d:'2026-05-14',t:20714,s:2787.0,a:14873.62,l:0},
+    {p:'shopee_herbal',d:'2026-05-15',t:15900,s:2139.29,a:11416.94,l:0},
+    {p:'shopee_herbal',d:'2026-05-16',t:25890,s:3483.41,a:18590.23,l:0},
+    {p:'shopee_herbal',d:'2026-05-17',t:22605,s:3041.42,a:16231.45,l:0},
+    {p:'shopee_herbal',d:'2026-05-18',t:22943,s:3086.9,a:16474.15,l:0},
+    {p:'shopee_herbal',d:'2026-05-19',t:21190,s:2851.04,a:15215.41,l:0},
+    {p:'shopee_herbal',d:'2026-05-20',t:19838,s:2669.13,a:14244.61,l:0},
+    {p:'shopee_herbal',d:'2026-05-21',t:15506,s:2086.28,a:11134.03,l:0},
+    {p:'shopee_herbal',d:'2026-05-22',t:26714,s:3594.28,a:19181.9,l:0},
+    {p:'shopee_herbal',d:'2026-05-23',t:24905,s:3350.88,a:17882.95,l:0},
+    {p:'shopee_herbal',d:'2026-05-24',t:18297,s:2461.8,a:13138.1,l:0},
+    {p:'shopee_herbal',d:'2026-05-25',t:22933,s:3085.56,a:16466.97,l:0},
+    {p:'shopee_herbal',d:'2026-05-26',t:24714,s:3325.18,a:17745.81,l:0},
+    {p:'shopee_herbal',d:'2026-05-27',t:24515,s:3298.41,a:17602.91,l:0},
+    {p:'shopee_herbal',d:'2026-05-28',t:18573,s:2498.93,a:13336.28,l:0},
+    {p:'shopee_herbal',d:'2026-05-29',t:24688,s:3321.69,a:17727.14,l:0},
+    {p:'shopee_herbal',d:'2026-05-30',t:21478,s:2889.79,a:15422.21,l:0},
+    {p:'shopee_herbal',d:'2026-05-31',t:18493,s:2488.17,a:13278.84,l:0},
+    {p:'shopee_herbal',d:'2026-06-01',t:11922,s:1570.35,a:8867.37,l:0},
+    {p:'shopee_herbal',d:'2026-06-02',t:17047,s:2245.41,a:12679.25,l:0},
+    {p:'shopee_herbal',d:'2026-06-03',t:19516,s:2570.62,a:14515.64,l:0},
+    {p:'shopee_herbal',d:'2026-06-04',t:23341,s:3074.45,a:17360.61,l:0},
+    {p:'shopee_herbal',d:'2026-06-05',t:17426,s:2295.33,a:12961.14,l:0},
+    {p:'shopee_herbal',d:'2026-06-06',t:21893,s:2883.72,a:16283.61,l:0},
+    {p:'shopee_herbal',d:'2026-06-07',t:11656,s:1535.31,a:8669.52,l:0},
+    {p:'shopee_herbal',d:'2026-06-08',t:20434,s:2691.54,a:15198.44,l:0},
+    {p:'shopee_herbal',d:'2026-06-09',t:12318,s:1622.51,a:9161.9,l:0},
+    {p:'shopee_herbal',d:'2026-06-10',t:16498,s:2173.1,a:12270.91,l:0},
+    {p:'shopee_herbal',d:'2026-06-11',t:23781,s:3132.4,a:17687.87,l:0},
+    {p:'shopee_herbal',d:'2026-06-12',t:31764,s:4183.91,a:23625.48,l:0},
+    {p:'shopee_herbal',d:'2026-06-13',t:24480,s:3224.47,a:18207.78,l:0},
+    {p:'shopee_herbal',d:'2026-06-14',t:15472,s:2037.95,a:11507.79,l:0},
+    {p:'shopee_herbal',d:'2026-06-15',t:22441,s:2955.9,a:16691.21,l:0},
+    {p:'shopee_herbal',d:'2026-06-16',t:24101,s:3174.55,a:17925.88,l:0},
+    {p:'shopee_herbal',d:'2026-06-17',t:28293,s:3726.72,a:21043.82,l:0},
+    {p:'shopee_herbal',d:'2026-06-18',t:29176,s:3843.02,a:21700.58,l:0},
+    {p:'shopee_herbal',d:'2026-06-19',t:15761,s:2076.02,a:11722.74,l:0},
+    {p:'shopee_herbal',d:'2026-06-20',t:15043,s:1981.44,a:11188.71,l:0},
+    {p:'shopee_herbal',d:'2026-06-21',t:16533,s:2177.71,a:12296.94,l:0},
+    {p:'shopee_herbal',d:'2026-06-22',t:20024,s:2637.54,a:14893.49,l:0},
+    {p:'shopee_herbal',d:'2026-06-23',t:13817,s:1819.96,a:10276.83,l:0},
+    {p:'shopee_herbal',d:'2026-06-24',t:16867,s:2221.7,a:12545.37,l:0},
+    {p:'shopee_herbal',d:'2026-06-25',t:18347,s:2416.64,a:13646.16,l:0},
+    {p:'shopee_herbal',d:'2026-06-26',t:13927,s:1834.45,a:10358.65,l:0},
+    {p:'shopee_herbal',d:'2026-06-27',t:17186,s:2263.72,a:12782.63,l:0},
+    {p:'shopee_herbal',d:'2026-06-28',t:12108,s:1594.85,a:9005.71,l:0},
+    {p:'shopee_herbal',d:'2026-06-29',t:10680,s:1406.76,a:7943.59,l:0},
+    {p:'shopee_herbal',d:'2026-06-30',t:13346,s:1757.92,a:9926.51,l:0},
+{p:'lazada',d:'2026-04-01',t:24859.94,s:2903.57,a:19921.95,l:0},
+    {p:'lazada',d:'2026-04-02',t:21301.29,s:1907.16,a:16363.3,l:0},
+    {p:'lazada',d:'2026-04-03',t:8826.84,s:1188.34,a:3888.85,l:0},
+    {p:'lazada',d:'2026-04-04',t:14809.84,s:1619.32,a:9871.85,l:0},
+    {p:'lazada',d:'2026-04-05',t:12988.96,s:1463.14,a:8050.97,l:0},
+    {p:'lazada',d:'2026-04-06',t:26373.55,s:2993.25,a:21435.56,l:0},
+    {p:'lazada',d:'2026-04-07',t:18441.37,s:1287.08,a:13503.38,l:0},
+    {p:'lazada',d:'2026-04-08',t:18475.96,s:870.51,a:13537.97,l:0},
+    {p:'lazada',d:'2026-04-09',t:18670.94,s:1306.84,a:13732.95,l:0},
+    {p:'lazada',d:'2026-04-10',t:18461.59,s:727.06,a:13523.6,l:0},
+    {p:'lazada',d:'2026-04-11',t:16499.39,s:671.86,a:11561.4,l:0},
+    {p:'lazada',d:'2026-04-12',t:16264.39,s:1120.54,a:11326.4,l:0},
+    {p:'lazada',d:'2026-04-13',t:19210.19,s:1150.47,a:14272.2,l:0},
+    {p:'lazada',d:'2026-04-14',t:17512.92,s:1078.48,a:12574.93,l:0},
+    {p:'lazada',d:'2026-04-15',t:17376.23,s:984.25,a:12438.24,l:0},
+    {p:'lazada',d:'2026-04-16',t:21706.36,s:1277.85,a:16768.37,l:0},
+    {p:'lazada',d:'2026-04-17',t:12905.49,s:1012.84,a:7967.5,l:0},
+    {p:'lazada',d:'2026-04-18',t:13674.64,s:1169.93,a:8736.65,l:0},
+    {p:'lazada',d:'2026-04-19',t:18091.64,s:1724.82,a:13153.65,l:0},
+    {p:'lazada',d:'2026-04-20',t:21100.89,s:1607.35,a:16162.9,l:0},
+    {p:'lazada',d:'2026-04-21',t:20306.59,s:2387.54,a:15368.6,l:0},
+    {p:'lazada',d:'2026-04-22',t:25261.39,s:2125.24,a:20323.4,l:0},
+    {p:'lazada',d:'2026-04-23',t:20491.29,s:1560.94,a:15553.3,l:0},
+    {p:'lazada',d:'2026-04-24',t:26671.09,s:1974.33,a:21733.1,l:0},
+    {p:'lazada',d:'2026-04-25',t:15079.89,s:1605.02,a:10141.9,l:0},
+    {p:'lazada',d:'2026-04-26',t:22140.09,s:1828.99,a:17202.1,l:0},
+    {p:'lazada',d:'2026-04-27',t:28132.45,s:2407.54,a:23194.46,l:0},
+    {p:'lazada',d:'2026-04-28',t:12856.44,s:1230.52,a:7918.45,l:0},
+    {p:'lazada',d:'2026-04-29',t:21988.39,s:1773.65,a:17050.4,l:0},
+    {p:'lazada',d:'2026-04-30',t:12094.1,s:999.73,a:7156.11,l:0},
+    {p:'lazada',d:'2026-05-01',t:12805.62,s:1307.17,a:8490.95,l:0},
+    {p:'lazada',d:'2026-05-02',t:13521.13,s:980.25,a:9206.46,l:0},
+    {p:'lazada',d:'2026-05-03',t:14441.27,s:1394.36,a:10126.6,l:0},
+    {p:'lazada',d:'2026-05-04',t:27136.45,s:2548.49,a:22821.78,l:0},
+    {p:'lazada',d:'2026-05-05',t:36695.79,s:2541.77,a:32381.12,l:0},
+    {p:'lazada',d:'2026-05-06',t:22208.95,s:2204.68,a:17894.28,l:0},
+    {p:'lazada',d:'2026-05-07',t:13702.48,s:1140.36,a:9387.81,l:0},
+    {p:'lazada',d:'2026-05-08',t:25459.02,s:2514.31,a:21144.35,l:0},
+    {p:'lazada',d:'2026-05-09',t:12837.67,s:1403.89,a:8523.0,l:0},
+    {p:'lazada',d:'2026-05-10',t:11436.02,s:1388.34,a:7121.35,l:0},
+    {p:'lazada',d:'2026-05-11',t:25239.87,s:3345.47,a:20925.2,l:0},
+    {p:'lazada',d:'2026-05-12',t:23886.72,s:2700.33,a:19572.05,l:0},
+    {p:'lazada',d:'2026-05-13',t:17147.52,s:2813.82,a:12832.85,l:0},
+    {p:'lazada',d:'2026-05-14',t:21202.42,s:2977.49,a:16887.75,l:0},
+    {p:'lazada',d:'2026-05-15',t:17088.78,s:3219.53,a:12774.11,l:0},
+    {p:'lazada',d:'2026-05-16',t:22837.48,s:3450.15,a:18522.81,l:0},
+    {p:'lazada',d:'2026-05-17',t:19046.97,s:2181.11,a:14732.3,l:0},
+    {p:'lazada',d:'2026-05-18',t:10238.32,s:1598.82,a:5923.65,l:0},
+    {p:'lazada',d:'2026-05-19',t:16205.27,s:1716.07,a:11890.6,l:0},
+    {p:'lazada',d:'2026-05-20',t:11959.97,s:1816.55,a:7645.3,l:0},
+    {p:'lazada',d:'2026-05-21',t:20681.37,s:2157.99,a:16366.7,l:0},
+    {p:'lazada',d:'2026-05-22',t:13559.52,s:1481.32,a:9244.85,l:0},
+    {p:'lazada',d:'2026-05-23',t:22283.32,s:2099.03,a:17968.65,l:0},
+    {p:'lazada',d:'2026-05-24',t:12304.62,s:1556.29,a:7989.95,l:0},
+    {p:'lazada',d:'2026-05-25',t:19755.62,s:2250.27,a:15440.95,l:0},
+    {p:'lazada',d:'2026-05-26',t:11815.77,s:1557.3,a:7501.1,l:0},
+    {p:'lazada',d:'2026-05-27',t:15170.37,s:1373.89,a:10855.7,l:0},
+    {p:'lazada',d:'2026-05-28',t:21044.52,s:1811.94,a:16729.85,l:0},
+    {p:'lazada',d:'2026-05-29',t:14433.86,s:634.83,a:10119.19,l:0},
+    {p:'lazada',d:'2026-05-30',t:14548.26,s:780.07,a:10233.59,l:0},
+    {p:'lazada',d:'2026-05-31',t:13501.38,s:965.56,a:9186.71,l:0},
+    {p:'lazada',d:'2026-06-01',t:31472.78,s:2025.06,a:27185.6,l:0},
+    {p:'lazada',d:'2026-06-02',t:32981.73,s:2019.62,a:28694.55,l:0},
+    {p:'lazada',d:'2026-06-03',t:25120.78,s:1988.93,a:20833.6,l:0},
+    {p:'lazada',d:'2026-06-04',t:18906.83,s:1982.05,a:14619.65,l:0},
+    {p:'lazada',d:'2026-06-05',t:18123.58,s:2013.84,a:13836.4,l:0},
+    {p:'lazada',d:'2026-06-06',t:27176.88,s:2863.6,a:22889.7,l:0},
+    {p:'lazada',d:'2026-06-07',t:20023.78,s:1841.69,a:15736.6,l:0},
+    {p:'lazada',d:'2026-06-08',t:18528.33,s:1476.04,a:14241.15,l:0},
+    {p:'lazada',d:'2026-06-09',t:14434.68,s:1523.51,a:10147.5,l:0},
+    {p:'lazada',d:'2026-06-10',t:16159.33,s:1106.76,a:11872.15,l:0},
+    {p:'lazada',d:'2026-06-11',t:16682.33,s:1173.41,a:12395.15,l:0},
+    {p:'lazada',d:'2026-06-12',t:15601.18,s:1315.11,a:11314.0,l:0},
+    {p:'lazada',d:'2026-06-13',t:11827.18,s:1353.46,a:7540.0,l:0},
+    {p:'lazada',d:'2026-06-14',t:9694.43,s:1233.56,a:5407.25,l:0},
+    {p:'lazada',d:'2026-06-15',t:13114.43,s:1705.07,a:8827.25,l:0},
+    {p:'lazada',d:'2026-06-16',t:15381.68,s:1705.71,a:11094.5,l:0},
+    {p:'lazada',d:'2026-06-17',t:11941.68,s:1256.65,a:7654.5,l:0},
+    {p:'lazada',d:'2026-06-18',t:14447.68,s:1903.3,a:10160.5,l:0},
+    {p:'lazada',d:'2026-06-19',t:14889.18,s:1909.77,a:10602.0,l:0},
+    {p:'lazada',d:'2026-06-20',t:11332.18,s:1905.91,a:7045.0,l:0},
+    {p:'lazada',d:'2026-06-21',t:18443.68,s:2973.33,a:14156.5,l:0},
+    {p:'lazada',d:'2026-06-22',t:13412.33,s:2010.03,a:9125.15,l:0},
+    {p:'lazada',d:'2026-06-23',t:16954.18,s:2406.34,a:12667.0,l:0},
+    {p:'lazada',d:'2026-06-24',t:17471.83,s:2768.46,a:13184.65,l:0},
+    {p:'lazada',d:'2026-06-25',t:15856.18,s:2174.94,a:11569.0,l:0},
+    {p:'lazada',d:'2026-06-26',t:19346.33,s:1507.76,a:15059.15,l:0},
+    {p:'lazada',d:'2026-06-27',t:11800.68,s:1300.14,a:7513.5,l:0},
+    {p:'lazada',d:'2026-06-28',t:16266.84,s:1712.81,a:11979.66,l:0},
+    {p:'lazada',d:'2026-06-29',t:17515.18,s:2186.36,a:13228.0,l:0},
+    {p:'lazada',d:'2026-06-30',t:10621.08,s:1341.65,a:6333.9,l:0},
+    {p:'tiktok',d:'2026-04-01',t:47533.08,s:5418.49,a:48676.2,l:10332.42},
+    {p:'tiktok',d:'2026-04-02',t:46248.53,s:5500.0,a:47276.69,l:10029.45},
+    {p:'tiktok',d:'2026-04-03',t:29688.91,s:3240.86,a:14184.25,l:861.18},
+    {p:'tiktok',d:'2026-04-04',t:58455.96,s:4391.83,a:41432.91,l:13933.54},
+    {p:'tiktok',d:'2026-04-05',t:34559.34,s:4169.4,a:37131.25,l:10841.89},
+    {p:'tiktok',d:'2026-04-06',t:45498.77,s:4512.86,a:36728.16,l:9862.9},
+    {p:'tiktok',d:'2026-04-07',t:45141.7,s:4343.54,a:38547.78,l:9261.34},
+    {p:'tiktok',d:'2026-04-08',t:36317.44,s:4300.63,a:33045.9,l:6127.34},
+    {p:'tiktok',d:'2026-04-09',t:39610.76,s:4190.54,a:41476.67,l:11086.69},
+    {p:'tiktok',d:'2026-04-10',t:30507.22,s:4293.46,a:26349.57,l:9721.04},
+    {p:'tiktok',d:'2026-04-11',t:36052.45,s:3841.17,a:38041.91,l:11477.76},
+    {p:'tiktok',d:'2026-04-12',t:32961.93,s:3814.9,a:35668.33,l:4888.22},
+    {p:'tiktok',d:'2026-04-13',t:40907.72,s:5404.81,a:41823.69,l:5452.73},
+    {p:'tiktok',d:'2026-04-14',t:43786.03,s:4780.41,a:35710.04,l:12937.53},
+    {p:'tiktok',d:'2026-04-15',t:56382.2,s:5500.0,a:48993.47,l:15361.07},
+    {p:'tiktok',d:'2026-04-16',t:60326.85,s:5500.0,a:38587.44,l:8558.61},
+    {p:'tiktok',d:'2026-04-17',t:35235.65,s:4018.98,a:37805.11,l:4818.57},
+    {p:'tiktok',d:'2026-04-18',t:30334.93,s:3047.02,a:31417.35,l:596.5},
+    {p:'tiktok',d:'2026-04-19',t:37080.64,s:3922.35,a:38419.64,l:6101.95},
+    {p:'tiktok',d:'2026-04-20',t:36016.44,s:3808.16,a:29205.96,l:1350.43},
+    {p:'tiktok',d:'2026-04-21',t:38233.19,s:4349.55,a:40316.59,l:363.09},
+    {p:'tiktok',d:'2026-04-22',t:34804.28,s:3686.92,a:36903.51,l:0.0},
+    {p:'tiktok',d:'2026-04-23',t:36252.55,s:4720.21,a:35316.03,l:10746.6},
+    {p:'tiktok',d:'2026-04-24',t:40596.41,s:4726.46,a:31999.73,l:8720.76},
+    {p:'tiktok',d:'2026-04-25',t:40427.63,s:4159.44,a:27653.58,l:5746.52},
+    {p:'tiktok',d:'2026-04-26',t:44520.61,s:5449.28,a:40750.03,l:5389.26},
+    {p:'tiktok',d:'2026-04-27',t:45615.56,s:4884.65,a:34084.74,l:12396.6},
+    {p:'tiktok',d:'2026-04-28',t:74328.01,s:5500.0,a:58210.19,l:19090.69},
+    {p:'tiktok',d:'2026-04-29',t:51022.79,s:5500.0,a:48350.28,l:12881.9},
+    {p:'tiktok',d:'2026-04-30',t:54849.6,s:5500.0,a:58239.38,l:6318.34},
+    {p:'tiktok',d:'2026-05-01',t:49135.18,s:5500.0,a:50748.84,l:9781.27},
+    {p:'tiktok',d:'2026-05-02',t:29081.88,s:4057.78,a:27881.95,l:3652.21},
+    {p:'tiktok',d:'2026-05-03',t:37922.2,s:4018.48,a:38441.02,l:1198.77},
+    {p:'tiktok',d:'2026-05-04',t:56966.11,s:5500.0,a:57014.36,l:14660.69},
+    {p:'tiktok',d:'2026-05-05',t:63945.72,s:5500.0,a:42930.16,l:20512.69},
+    {p:'tiktok',d:'2026-05-06',t:52648.38,s:5442.92,a:51309.34,l:12840.18},
+    {p:'tiktok',d:'2026-05-07',t:60313.97,s:5500.0,a:44902.35,l:14656.03},
+    {p:'tiktok',d:'2026-05-08',t:27731.86,s:4133.0,a:29498.77,l:8295.89},
+    {p:'tiktok',d:'2026-05-09',t:37760.6,s:4589.46,a:28416.23,l:10847.29},
+    {p:'tiktok',d:'2026-05-10',t:53020.28,s:5500.0,a:46475.61,l:17614.85},
+    {p:'tiktok',d:'2026-05-11',t:55211.48,s:5432.3,a:41403.76,l:18825.43},
+    {p:'tiktok',d:'2026-05-12',t:63815.26,s:5500.0,a:46713.94,l:16068.54},
+    {p:'tiktok',d:'2026-05-13',t:54808.43,s:5500.0,a:42404.39,l:17985.77},
+    {p:'tiktok',d:'2026-05-14',t:54636.93,s:5500.0,a:51291.72,l:9813.11},
+    {p:'tiktok',d:'2026-05-15',t:51837.2,s:5500.0,a:36449.96,l:12517.86},
+    {p:'tiktok',d:'2026-05-16',t:58010.25,s:5500.0,a:50579.31,l:24094.69},
+    {p:'tiktok',d:'2026-05-17',t:64652.53,s:5500.0,a:49401.87,l:27935.53},
+    {p:'tiktok',d:'2026-05-18',t:31034.18,s:4420.75,a:17243.77,l:5934.65},
+    {p:'tiktok',d:'2026-05-19',t:49127.37,s:5500.0,a:49788.45,l:11924.66},
+    {p:'tiktok',d:'2026-05-20',t:52826.12,s:5500.0,a:53040.03,l:15352.83},
+    {p:'tiktok',d:'2026-05-21',t:39779.06,s:5178.81,a:42855.99,l:0.0},
+    {p:'tiktok',d:'2026-05-22',t:48906.55,s:5500.0,a:47421.76,l:12507.01},
+    {p:'tiktok',d:'2026-05-23',t:48657.76,s:5500.0,a:46011.78,l:15176.11},
+    {p:'tiktok',d:'2026-05-24',t:43522.77,s:4411.52,a:47081.89,l:9713.7},
+    {p:'tiktok',d:'2026-05-25',t:53075.69,s:5500.0,a:57167.98,l:8142.73},
+    {p:'tiktok',d:'2026-05-26',t:35604.49,s:4304.53,a:38590.58,l:4850.27},
+    {p:'tiktok',d:'2026-05-27',t:54319.53,s:5500.0,a:49849.94,l:23290.94},
+    {p:'tiktok',d:'2026-05-28',t:62145.64,s:5500.0,a:54025.42,l:19010.74},
+    {p:'tiktok',d:'2026-05-29',t:41241.74,s:5500.0,a:45277.64,l:9880.95},
+    {p:'tiktok',d:'2026-05-30',t:30208.74,s:4656.85,a:31332.07,l:11550.83},
+    {p:'tiktok',d:'2026-05-31',t:47149.12,s:5500.0,a:46073.65,l:18318.28},
+    {p:'tiktok',d:'2026-06-01',t:51658.14,s:5074.58,a:47118.19,l:9350.4},
+    {p:'tiktok',d:'2026-06-02',t:46701.71,s:5500.0,a:49392.91,l:8587.69},
+    {p:'tiktok',d:'2026-06-03',t:56527.52,s:5500.0,a:51514.4,l:12102.35},
+    {p:'tiktok',d:'2026-06-04',t:52567.07,s:5387.54,a:59067.81,l:22144.34},
+    {p:'tiktok',d:'2026-06-05',t:69720.67,s:5500.0,a:63506.36,l:20814.18},
+    {p:'tiktok',d:'2026-06-06',t:64971.86,s:5500.0,a:47186.06,l:25223.09},
+    {p:'tiktok',d:'2026-06-07',t:45269.48,s:4940.64,a:41516.01,l:18191.42},
+    {p:'tiktok',d:'2026-06-08',t:46079.61,s:5500.0,a:49880.41,l:16222.01},
+    {p:'tiktok',d:'2026-06-09',t:53504.35,s:5266.49,a:43673.09,l:16381.46},
+    {p:'tiktok',d:'2026-06-10',t:45640.11,s:4835.99,a:34803.48,l:13748.78},
+    {p:'tiktok',d:'2026-06-11',t:51510.38,s:4752.2,a:40837.07,l:23080.4},
+    {p:'tiktok',d:'2026-06-12',t:48910.35,s:4678.09,a:38019.54,l:18548.22},
+    {p:'tiktok',d:'2026-06-13',t:52520.23,s:4914.82,a:35036.64,l:22238.85},
+    {p:'tiktok',d:'2026-06-14',t:43393.69,s:4796.81,a:44120.12,l:13460.49},
+    {p:'tiktok',d:'2026-06-15',t:63037.98,s:4723.55,a:37966.86,l:19964.43},
+    {p:'tiktok',d:'2026-06-16',t:45764.84,s:4314.71,a:31746.69,l:11411.23},
+    {p:'tiktok',d:'2026-06-17',t:42554.98,s:5500.0,a:42833.53,l:13911.1},
+    {p:'tiktok',d:'2026-06-18',t:54338.7,s:5500.0,a:40197.26,l:24794.13},
+    {p:'tiktok',d:'2026-06-19',t:45435.84,s:5500.0,a:36489.34,l:17418.6},
+    {p:'tiktok',d:'2026-06-20',t:41928.28,s:5500.0,a:35694.0,l:9439.27},
+    {p:'tiktok',d:'2026-06-21',t:42161.85,s:5500.0,a:42326.39,l:22191.82},
+    {p:'tiktok',d:'2026-06-22',t:46472.12,s:5500.0,a:44401.73,l:13473.46},
+    {p:'tiktok',d:'2026-06-23',t:49790.57,s:5500.0,a:45339.58,l:11683.9},
+    {p:'tiktok',d:'2026-06-24',t:46446.33,s:5500.0,a:27619.72,l:20286.09},
+    {p:'tiktok',d:'2026-06-25',t:72777.81,s:5367.48,a:50327.96,l:24131.91},
+    {p:'tiktok',d:'2026-06-26',t:54641.49,s:4956.65,a:33783.13,l:20912.29},
+    {p:'tiktok',d:'2026-06-27',t:52442.7,s:4810.2,a:35380.84,l:20362.63},
+    {p:'tiktok',d:'2026-06-28',t:46690.27,s:4891.86,a:38392.92,l:14831.42},
+    {p:'tiktok',d:'2026-06-29',t:47015.39,s:4815.31,a:34036.76,l:10756.12},
+    {p:'tiktok',d:'2026-06-30',t:54872.04,s:4260.46,a:22574.1,l:19221.52},
+    {p:'shopee_main',d:'2026-07-01',t:50636.0,s:5731.7,a:33946.04,l:0},
+    {p:'shopee_main',d:'2026-07-02',t:42532.0,s:4814.37,a:28513.17,l:0},
+    {p:'shopee_main',d:'2026-07-03',t:37427.0,s:4236.52,a:25090.82,l:0},
+    {p:'shopee_main',d:'2026-07-04',t:26019.0,s:2945.2,a:17442.97,l:0},
+    {p:'shopee_herbal',d:'2026-07-01',t:15465.0,s:0,a:0,l:0},
+    {p:'shopee_herbal',d:'2026-07-02',t:12585.0,s:0,a:0,l:0},
+    {p:'shopee_herbal',d:'2026-07-03',t:14384.0,s:0,a:0,l:0},
+    {p:'shopee_herbal',d:'2026-07-04',t:18483.0,s:0,a:0,l:0},
+    {p:'lazada',d:'2026-07-01',t:17001.5,s:2538.66,a:14720.5,l:0},
+    {p:'lazada',d:'2026-07-02',t:24658.7,s:2564.9,a:16326.5,l:0},
+    {p:'lazada',d:'2026-07-03',t:16156.0,s:2058.3,a:12065.5,l:0},
+    {p:'lazada',d:'2026-07-04',t:10209.4,s:2042.8,a:7274.15,l:0},
+    {p:'tiktok',d:'2026-07-01',t:55474.55,s:5500.0,a:43172.12,l:16493.83},
+    {p:'tiktok',d:'2026-07-02',t:56327.37,s:5500.0,a:38188.52,l:18652.91},
+    {p:'tiktok',d:'2026-07-03',t:65257.86,s:5500.0,a:41904.98,l:24652.52},
+    {p:'tiktok',d:'2026-07-04',t:48482.85,s:5500.0,a:43075.2,l:18363.19},
+    {p:'tiktok',d:'2026-07-06',t:62145.86,s:5500.0,a:49286.16,l:15159.51},
+    {p:'lazada',d:'2026-07-06',t:31432.44,s:2392.23,a:25132.8,l:0},
+    {p:'shopee_herbal',d:'2026-07-06',t:15425,s:5034.01,a:21613.0,l:0}
+  ];
+
+function seedData(){
+  return SEED_ROWS.map(r => ({
+    id: uid(), platform: r.p, date: r.d, total: r.t, spend: r.s, adSales: r.a, liveSales: r.l
+  }));
+}
+
+const DATA_VERSION = 'v5-july6-data';
+
+async function loadEntries(){
+  try{
+    const res = await window.storage.get('easebrew_entries', false);
+    entries = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ entries = []; }
+
+  let version = null;
+  try{
+    const v = await window.storage.get('easebrew_data_version', false);
+    version = v && v.value ? v.value : null;
+  }catch(e){ version = null; }
+
+  if(entries.length === 0 || version !== DATA_VERSION){
+    entries = seedData();
+    saveEntries();
+    try{ await window.storage.set('easebrew_data_version', DATA_VERSION, false); }catch(e){}
+  }
+  initMonthSelect();
+  render();
+}
+async function saveEntries(){
+  try{ await window.storage.set('easebrew_entries', JSON.stringify(entries), false); }
+  catch(e){ console.error('Storage error', e); }
+}
+
+function buildPlatformCards(){
+  const wrap = document.getElementById('platformCards');
+  wrap.innerHTML = PLATFORMS.map(p => `
+    <div class="card plat-card">
+      <div class="plat-head">
+        <span class="plat-chip" style="background:${p.color}"></span>
+        <span class="plat-name">${p.name}</span>
+      </div>
+      <div class="plat-stats" id="stats-${p.id}"></div>
+      <div class="entry-form">
+        <div><label>Date</label><input type="date" id="date-${p.id}" value="${todayStr()}" onchange="onDateChange('${p.id}')"></div>
+        <div><label>Total sales (₱)</label><input type="text" inputmode="decimal" id="total-${p.id}" placeholder="0" onblur="formatAmountField(this)"></div>
+        <div><label>Ad spend (₱)</label><input type="text" inputmode="decimal" id="spend-${p.id}" placeholder="0" onblur="formatAmountField(this)"></div>
+        <div><label>Sales from ads (₱)</label><input type="text" inputmode="decimal" id="adsales-${p.id}" placeholder="0" onblur="formatAmountField(this)"></div>
+        ${p.hasLive ? `<div class="full"><label>Live sales (₱)</label><input type="text" inputmode="decimal" id="live-${p.id}" placeholder="0" onblur="formatAmountField(this)"></div>` : ''}
+      </div>
+      <div class="full" id="note-${p.id}" style="font-size:11px;color:var(--muted);margin:6px 0 0;"></div>
+      <button class="add-btn primary" id="btn-${p.id}" onclick="addEntry('${p.id}')">Add entry</button>
+    </div>
+  `).join('');
+}
+
+function findEntry(platformId, date){
+  return entries.find(e => e.platform === platformId && e.date === date);
+}
+
+function onDateChange(platformId){
+  const date = document.getElementById('date-'+platformId).value;
+  const existing = findEntry(platformId, date);
+  const note = document.getElementById('note-'+platformId);
+  const btn = document.getElementById('btn-'+platformId);
+  const liveEl = document.getElementById('live-'+platformId);
+  if(existing){
+    document.getElementById('total-'+platformId).value = commaFmt(existing.total);
+    document.getElementById('spend-'+platformId).value = commaFmt(existing.spend);
+    document.getElementById('adsales-'+platformId).value = commaFmt(existing.adSales);
+    if(liveEl) liveEl.value = commaFmt(existing.liveSales || 0);
+    note.textContent = 'May naka-save na para sa araw na ito. I-update lang kung mag-"Add entry" ka.';
+    btn.textContent = 'Update entry';
+  }else{
+    ['total','spend','adsales'].forEach(f => document.getElementById(f+'-'+platformId).value = '');
+    if(liveEl) liveEl.value = '';
+    note.textContent = '';
+    btn.textContent = 'Add entry';
+  }
+}
+
+function addEntry(platformId){
+  const date = document.getElementById('date-'+platformId).value || todayStr();
+  const total = numVal('total-'+platformId);
+  const spend = numVal('spend-'+platformId);
+  const adSales = numVal('adsales-'+platformId);
+  const liveEl = document.getElementById('live-'+platformId);
+  const liveSales = liveEl ? numVal('live-'+platformId) : 0;
+  if(total <= 0){ alert('Enter total sales para ma-record.'); return; }
+  if(adSales > total){ alert('Ang sales from ads ay hindi pwedeng mas malaki sa total sales.'); return; }
+  if(liveSales > adSales){ alert('Ang live sales ay dapat kasama lang sa loob ng sales from ads.'); return; }
+  const existing = findEntry(platformId, date);
+  if(existing){
+    existing.total = total; existing.spend = spend; existing.adSales = adSales; existing.liveSales = liveSales;
+  }else{
+    entries.push({ id:uid(), platform:platformId, date, total, spend, adSales, liveSales });
+  }
+  ['total','spend','adsales'].forEach(f => document.getElementById(f+'-'+platformId).value = '');
+  if(liveEl) liveEl.value = '';
+  document.getElementById('note-'+platformId).textContent = '';
+  document.getElementById('btn-'+platformId).textContent = 'Add entry';
+  saveEntries();
+  initMonthSelect();
+  render();
+}
+
+function deleteEntry(id){
+  entries = entries.filter(e => e.id !== id);
+  saveEntries();
+  initMonthSelect();
+  render();
+}
+
+let viewMode = 'month';
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function fmtDate(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function parseDate(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function addDays(dateStr, n){ const d = parseDate(dateStr); d.setDate(d.getDate()+n); return fmtDate(d); }
+function lastDayOfMonth(m){ const [y,mo] = m.split('-').map(Number); return fmtDate(new Date(y, mo, 0)); }
+
+function getAllWeeks(){
+  const dates = Array.from(new Set(entries.map(e=>e.date))).sort();
+  if(dates.length===0) return [];
+  const minD = parseDate(dates[0]);
+  const maxD = parseDate(dates[dates.length-1]);
+  let d = new Date(minD);
+  const shift = (d.getDay()+6)%7; // Monday=0
+  d.setDate(d.getDate()-shift);
+  const weeks = [];
+  while(d <= maxD){
+    const start = fmtDate(d);
+    const endD = new Date(d); endD.setDate(endD.getDate()+6);
+    const end = fmtDate(endD);
+    weeks.push({start, end});
+    d.setDate(d.getDate()+7);
+  }
+  return weeks;
+}
+
+function initMonthSelect(){
+  let months = Array.from(new Set(entries.map(e => monthKey(e.date))));
+  months.sort();
+  const sel = document.getElementById('monthSelect');
+  const prevSelected = sel.value;
+  const current = monthKey(todayStr());
+  let defaultMonth;
+  if(prevSelected && months.includes(prevSelected)) defaultMonth = prevSelected;
+  else if(months.includes(current)) defaultMonth = current;
+  else defaultMonth = months[months.length-1];
+  sel.innerHTML = months.map(m => {
+    const d = new Date(m+'-01');
+    const label = d.toLocaleDateString('en-US',{month:'long', year:'numeric'});
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  sel.value = defaultMonth;
+
+  const weekSel = document.getElementById('weekSelect');
+  const weeks = getAllWeeks();
+  const prevWeek = weekSel.value;
+  weekSel.innerHTML = weeks.map(w => {
+    const sD = parseDate(w.start), eD = parseDate(w.end);
+    const label = `${sD.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${eD.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+    return `<option value="${w.start}|${w.end}">${label}</option>`;
+  }).join('');
+  if(weeks.length){
+    const stillValid = weeks.some(w => `${w.start}|${w.end}` === prevWeek);
+    weekSel.value = stillValid ? prevWeek : `${weeks[weeks.length-1].start}|${weeks[weeks.length-1].end}`;
+  }
+
+  const custStart = document.getElementById('customStart');
+  const custEnd = document.getElementById('customEnd');
+  if(!custStart.value && dates_exist()){
+    custStart.value = months.length ? `${months[0]}-01` : todayStr();
+    custEnd.value = todayStr();
+  }
+  function dates_exist(){ return entries.length > 0; }
+}
+
+function setRangeMode(mode){
+  viewMode = mode;
+  document.querySelectorAll('#rangeTabs button').forEach(b => b.classList.toggle('active', b.dataset.mode===mode));
+  document.getElementById('monthSelect').style.display = mode==='month' ? '' : 'none';
+  document.getElementById('weekSelect').style.display = mode==='week' ? '' : 'none';
+  document.getElementById('customRange').style.display = mode==='custom' ? 'flex' : 'none';
+  document.getElementById('quotaBarWrap').style.display = mode==='month' ? '' : 'none';
+  document.getElementById('heroTargetWrap').style.display = mode==='month' ? '' : 'none';
+  render();
+}
+
+function getSelectedRange(){
+  if(viewMode === 'week'){
+    const v = document.getElementById('weekSelect').value;
+    if(v){ const [start,end] = v.split('|'); return {start, end}; }
+  }
+  if(viewMode === 'custom'){
+    const start = document.getElementById('customStart').value;
+    const end = document.getElementById('customEnd').value;
+    if(start && end) return {start, end: end < start ? start : end};
+  }
+  const month = getSelectedMonth();
+  return { start: month+'-01', end: lastDayOfMonth(month) };
+}
+
+function getSelectedMonth(){
+  const sel = document.getElementById('monthSelect');
+  return sel.value || monthKey(todayStr());
+}
+
+function computeStats(list){
+  const total = list.reduce((s,e)=>s+e.total,0);
+  const adSales = list.reduce((s,e)=>s+e.adSales,0);
+  const spend = list.reduce((s,e)=>s+e.spend,0);
+  const liveSales = list.reduce((s,e)=>s+(e.liveSales||0),0);
+  const organic = total - adSales;
+  const netPaid = adSales - liveSales;
+  const roas = spend > 0 ? adSales/spend : 0;
+  return { total, adSales, netPaid, organic, spend, roas, liveSales };
+}
+
+function render(){
+  const range = getSelectedRange();
+  const rangeEntries = entries.filter(e => e.date >= range.start && e.date <= range.end);
+
+  const heroLabelText = viewMode==='month' ? 'Total sales this month' : viewMode==='week' ? 'Total sales this week' : 'Total sales (custom range)';
+  document.getElementById('heroLabel').textContent = heroLabelText;
+
+  const s = computeStats(rangeEntries);
+  document.getElementById('heroTotal').textContent = peso(s.total);
+  document.getElementById('quotaVal').textContent = peso(QUOTA);
+  const pct = Math.min(100, (s.total/QUOTA)*100);
+  document.getElementById('quotaBar').style.width = pct.toFixed(1) + '%';
+  document.getElementById('quotaPct').textContent = pct.toFixed(1) + '% of quota';
+  document.getElementById('quotaRemain').textContent = peso(Math.max(0, QUOTA - s.total)) + ' remaining';
+
+  document.getElementById('paidTotal').textContent = peso(s.netPaid);
+  document.getElementById('liveTotal').textContent = peso(s.liveSales);
+  document.getElementById('organicTotal').textContent = peso(s.organic);
+  document.getElementById('paidPct').textContent = (s.total>0 ? (s.netPaid/s.total*100).toFixed(1) : '0') + '% of total';
+  document.getElementById('livePct').textContent = (s.total>0 ? (s.liveSales/s.total*100).toFixed(1) : '0') + '% of total · reference lang, ads-driven din';
+  document.getElementById('organicPct').textContent = (s.total>0 ? (s.organic/s.total*100).toFixed(1) : '0') + '% of total';
+
+  document.getElementById('roasVal').textContent = s.roas.toFixed(1) + 'x';
+  const badge = document.getElementById('roasBadge');
+  if(s.roas >= 10){ badge.textContent = 'on target'; badge.className = 'roas-badge roas-good'; }
+  else{ badge.textContent = 'below target'; badge.className = 'roas-badge roas-bad'; }
+
+  PLATFORMS.forEach(p => {
+    const pe = rangeEntries.filter(e => e.platform === p.id);
+    const ps = computeStats(pe);
+    document.getElementById('stats-'+p.id).innerHTML = `
+      <span>Total<b>${peso(ps.total)}</b></span>
+      <span>Paid ads<b>${peso(ps.netPaid)}</b></span>
+      <span>Organic<b>${peso(ps.organic)}</b></span>
+      <span>ROAS<b>${ps.roas.toFixed(1)}x</b></span>
+      ${p.hasLive ? `<span>Live sales<b>${peso(ps.liveSales)}</b></span>` : ''}
+    `;
+  });
+
+  renderFilterTabs();
+  renderChart(rangeEntries);
+  renderLog(rangeEntries);
+}
+
+function renderFilterTabs(){
+  const wrap = document.getElementById('platformFilter');
+  const opts = [{id:'all', name:'All platforms'}, ...PLATFORMS];
+  wrap.innerHTML = opts.map(o => `<button class="${activeFilter===o.id?'active':''}" onclick="setFilter('${o.id}')">${o.name}</button>`).join('');
+}
+function setFilter(id){ activeFilter = id; render(); }
+
+function renderChart(monthEntries){
+  const filtered = activeFilter==='all' ? monthEntries : monthEntries.filter(e=>e.platform===activeFilter);
+  const byDate = {};
+  filtered.forEach(e => {
+    if(!byDate[e.date]) byDate[e.date] = {organic:0, paid:0, live:0};
+    const live = e.liveSales || 0;
+    byDate[e.date].organic += (e.total - e.adSales);
+    byDate[e.date].paid += (e.adSales - live);
+    byDate[e.date].live += live;
+  });
+  const dates = Object.keys(byDate).sort();
+  const organicData = dates.map(d => Math.round(byDate[d].organic));
+  const paidData = dates.map(d => Math.round(byDate[d].paid));
+  const liveData = dates.map(d => Math.round(byDate[d].live));
+
+  if(chart) chart.destroy();
+  const ctx = document.getElementById('trendChart');
+  if(dates.length === 0){
+    chart = null;
+    return;
+  }
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dates.map(d => d.slice(5)),
+      datasets: [
+        { label:'Organic', data: organicData, backgroundColor:'#4F7A5A', borderRadius:4 },
+        { label:'Paid ads', data: paidData, backgroundColor:'#C97B3D', borderRadius:4 },
+        { label:'Live sales', data: liveData, backgroundColor:'#1FC9B7', borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{ stacked:true, grid:{display:false} },
+        y:{ stacked:true, grid:{color:'#E4DDCF'}, ticks:{ callback:(v)=>'₱'+(v/1000)+'k' } }
+      },
+      plugins:{ legend:{ display:false } }
+    }
+  });
+}
+
+function renderLog(monthEntries){
+  const el = document.getElementById('logTable');
+  if(monthEntries.length === 0){
+    el.innerHTML = '<div class="empty">Wala pang entries ngayong buwan. Mag-add sa itaas.</div>';
+    return;
+  }
+  const sorted = [...monthEntries].sort((a,b)=> b.date.localeCompare(a.date));
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Date</th><th>Platform</th><th>Total</th><th>Ad spend</th><th>Ad sales</th><th>Live sales</th><th>Organic</th><th>ROAS</th><th></th></tr></thead>
+      <tbody>
+        ${sorted.map(e => {
+          const plat = PLATFORMS.find(p=>p.id===e.platform);
+          const organic = e.total - e.adSales;
+          const roas = e.spend>0 ? (e.adSales/e.spend).toFixed(1) : '—';
+          return `<tr>
+            <td>${e.date}</td>
+            <td class="p">${plat.name}</td>
+            <td>${peso(e.total)}</td>
+            <td>${peso(e.spend)}</td>
+            <td>${peso(e.adSales)}</td>
+            <td>${e.liveSales ? peso(e.liveSales) : '—'}</td>
+            <td>${peso(organic)}</td>
+            <td>${roas}${roas!=='—'?'x':''}</td>
+            <td><button class="del" onclick="deleteEntry('${e.id}')">Delete</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+document.getElementById('monthSelect').addEventListener('change', render);
+document.getElementById('weekSelect').addEventListener('change', render);
+document.getElementById('customStart').addEventListener('change', render);
+document.getElementById('customEnd').addEventListener('change', render);
+document.querySelectorAll('#rangeTabs button').forEach(btn => {
+  btn.addEventListener('click', () => setRangeMode(btn.dataset.mode));
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if(confirm('Sigurado ka bang gusto mong burahin lahat ng data? Hindi na ito mababawi.')){
+    entries = [];
+    saveEntries();
+    initMonthSelect();
+    render();
+  }
+});
+
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const range = getSelectedRange();
+  const rangeEntries = entries.filter(e => e.date >= range.start && e.date <= range.end);
+  let csv = 'Date,Platform,Total Sales,Ad Spend,Ad Sales,Live Sales,Organic Sales,ROAS\n';
+  rangeEntries.forEach(e => {
+    const plat = PLATFORMS.find(p=>p.id===e.platform).name;
+    const organic = e.total - e.adSales;
+    const roas = e.spend>0 ? (e.adSales/e.spend).toFixed(2) : '';
+    csv += `${e.date},${plat},${e.total},${e.spend},${e.adSales},${e.liveSales||0},${organic},${roas}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `easebrew-sales-${range.start}_to_${range.end}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+buildPlatformCards();
+loadEntries().then(() => PLATFORMS.forEach(p => onDateChange(p.id)));
+</script>
+</body>
+</html>
